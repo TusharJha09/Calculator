@@ -1,648 +1,432 @@
 
-import java.util.Locale;
-import java.util.Scanner;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.math.*;
+import java.util.ArrayList;
 
-public class Calculator {
+public class Calculator extends JFrame {
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.MathContext;
-import java.math.RoundingMode;
-import java.util.Locale;
-import java.util.Scanner;
+    private final Color bg = new Color(12, 16, 30);
+    private final Color panel = new Color(23, 30, 49);
+    private final Color cyan = new Color(0, 225, 210);
+    private final Color purple = new Color(145, 95, 255);
+    private final Color white = new Color(240, 245, 255);
 
-public class Calculator {
+    private JLabel display;
+    private JLabel expression;
+    private JPanel historyPanel;
 
-    private static final Scanner SCANNER = new Scanner(System.in);
+    private String input = "0";
+    private String operator = "";
+    private double first = 0;
+    private double answer = 0;
+    private boolean newInput = true;
 
-    // Precision for division, square root, and fractional powers
-    private static final MathContext MC =
-            new MathContext(34, RoundingMode.HALF_EVEN);
+    private final ArrayList<String> history = new ArrayList<>();
 
-    private static final int MAX_FACTORIAL = 1000;
-    private static final int MAX_INTEGER_POWER = 10000;
+    private float glow = 0;
 
-    // ================= BASIC OPERATIONS =================
+    public Calculator() {
 
-    private static BigDecimal add(BigDecimal a, BigDecimal b) {
-        return a.add(b);
+        setTitle("NEXUS - Animated Calculator");
+        setSize(800, 600);
+        setMinimumSize(new Dimension(650, 500));
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        createGUI();
+
+        Timer animation = new Timer(40, e -> {
+            glow += 0.05f;
+            if (glow > 6.28f) glow = 0;
+            repaint();
+        });
+
+        animation.start();
     }
 
-    private static BigDecimal subtract(BigDecimal a, BigDecimal b) {
-        return a.subtract(b);
-    }
+    private void createGUI() {
 
-    private static BigDecimal multiply(BigDecimal a, BigDecimal b) {
-        return a.multiply(b);
-    }
+        JPanel main = new JPanel(new BorderLayout(15, 15)) {
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setPaint(new GradientPaint(
+                    0, 0, bg,
+                    getWidth(), getHeight(),
+                    new Color(35, 20, 65)
+                ));
+                g2.fillRect(0, 0, getWidth(), getHeight());
 
-    private static BigDecimal divide(BigDecimal a, BigDecimal b) {
-        if (b.signum() == 0) {
-            throw new ArithmeticException(
-                    "Division by zero is not allowed.");
-        }
-
-        return a.divide(b, MC);
-    }
-
-    private static BigDecimal modulus(BigDecimal a, BigDecimal b) {
-        if (b.signum() == 0) {
-            throw new ArithmeticException(
-                    "Modulus by zero is not allowed.");
-        }
-
-        return a.remainder(b);
-    }
-
-    // ================= ADVANCED OPERATIONS =================
-
-    private static BigDecimal squareRoot(BigDecimal number) {
-        if (number.signum() < 0) {
-            throw new ArithmeticException(
-                    "Square root of a negative number is not real.");
-        }
-
-        return number.sqrt(MC);
-    }
-
-    // Example: 20% of 500 = 100
-    private static BigDecimal percentage(
-            BigDecimal value, BigDecimal percent) {
-
-        return value.multiply(percent)
-                    .divide(BigDecimal.valueOf(100), MC);
-    }
-
-    // Calculates exact factorials using BigInteger
-    private static BigDecimal factorial(BigDecimal number) {
-        if (number.signum() < 0
-                || number.stripTrailingZeros().scale() > 0) {
-            throw new ArithmeticException(
-                    "Factorial requires a non-negative integer.");
-        }
-
-        if (number.compareTo(
-                BigDecimal.valueOf(MAX_FACTORIAL)) > 0) {
-            throw new ArithmeticException(
-                    "Maximum supported factorial input is "
-                            + MAX_FACTORIAL + ".");
-        }
-
-        int n = number.intValueExact();
-        BigInteger result = BigInteger.ONE;
-
-        for (int i = 2; i <= n; i++) {
-            result = result.multiply(BigInteger.valueOf(i));
-        }
-
-        return new BigDecimal(result);
-    }
-
-    // Integer powers use BigDecimal.
-    // Fractional powers use Java's Math.pow().
-    private static BigDecimal power(
-            BigDecimal base, BigDecimal exponent) {
-
-        if (exponent.stripTrailingZeros().scale() <= 0) {
-            int n;
-
-            try {
-                n = exponent.intValueExact();
-            } catch (ArithmeticException e) {
-                throw new ArithmeticException(
-                        "Integer exponent is outside the supported range.");
+                g2.setColor(new Color(0, 225, 210, 20));
+                int x = (int)(100 + 50 * Math.sin(glow));
+                g2.fillOval(x, 80, 200, 200);
             }
+        };
 
-            if (Math.abs((long) n) > MAX_INTEGER_POWER) {
-                throw new ArithmeticException(
-                        "Integer exponent must be between -"
-                                + MAX_INTEGER_POWER + " and "
-                                + MAX_INTEGER_POWER + ".");
-            }
+        main.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
-            if (n < 0 && base.signum() == 0) {
-                throw new ArithmeticException(
-                        "Zero cannot have a negative exponent.");
-            }
+        JLabel title = new JLabel("N E X U S");
+        title.setForeground(cyan);
+        title.setFont(new Font("Arial", Font.BOLD, 28));
 
-            if (n >= 0) {
-                return base.pow(n);
-            }
+        JLabel subtitle = new JLabel("ADVANCED SCIENTIFIC CALCULATOR");
+        subtitle.setForeground(Color.LIGHT_GRAY);
+        subtitle.setFont(new Font("Arial", Font.PLAIN, 11));
 
-            return BigDecimal.ONE.divide(base.pow(-n), MC);
-        }
+        JPanel header = new JPanel();
+        header.setOpaque(false);
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        header.add(title);
+        header.add(subtitle);
 
-        if (base.signum() < 0) {
-            throw new ArithmeticException(
-                    "Fractional powers of negative bases "
-                            + "are not supported.");
-        }
+        JPanel calculator = new JPanel(new BorderLayout(10, 12));
+        calculator.setBackground(panel);
+        calculator.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
 
-        if (base.signum() == 0 && exponent.signum() < 0) {
-            throw new ArithmeticException(
-                    "Zero cannot have a negative exponent.");
-        }
+        JPanel screen = new JPanel(new GridLayout(2, 1));
+        screen.setBackground(new Color(15, 22, 38));
+        screen.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
-        double result = Math.pow(
-                base.doubleValue(), exponent.doubleValue());
+        expression = new JLabel("READY TO CALCULATE");
+        expression.setForeground(Color.GRAY);
+        expression.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        if (!Double.isFinite(result)) {
-            throw new ArithmeticException(
-                    "Power result is outside the supported range.");
-        }
+        display = new JLabel("0");
+        display.setForeground(cyan);
+        display.setFont(new Font("Monospaced", Font.BOLD, 38));
+        display.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        return BigDecimal.valueOf(result);
-    }
+        screen.add(expression);
+        screen.add(display);
 
-    // ================= INPUT VALIDATION =================
+        String[][] keys = {
+            {"AC", "DEL", "√", "^", "÷"},
+            {"7", "8", "9", "!", "×"},
+            {"4", "5", "6", "%", "-"},
+            {"1", "2", "3", "π", "+"},
+            {"±", "0", ".", "HIST", "="}
+        };
 
-    private static BigDecimal readNumber(String prompt) {
-        while (true) {
-            System.out.print(prompt);
+        JPanel buttons = new JPanel(new GridLayout(5, 5, 9, 9));
+        buttons.setOpaque(false);
 
-            if (!SCANNER.hasNextLine()) {
-                return null;
-            }
+        for (String[] row : keys) {
+            for (String key : row) {
+                JButton b = new JButton(key);
 
-            String input = SCANNER.nextLine().trim();
+                b.setFont(new Font("Arial", Font.BOLD, 17));
+                b.setForeground(white);
+                b.setBackground(getButtonColor(key));
+                b.setFocusPainted(false);
+                b.setBorderPainted(false);
+                b.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            if (input.equalsIgnoreCase("exit")) {
-                return null;
-            }
-
-            if (input.isEmpty()) {
-                System.out.println(
-                        "Input cannot be empty. Please try again.\n");
-                continue;
-            }
-
-            try {
-                return new BigDecimal(input);
-            } catch (NumberFormatException e) {
-                System.out.println(
-                        "Invalid number. Enter a valid decimal number.\n");
-            }
-        }
-    }
-
-    // ================= CALCULATION DISPATCHER =================
-
-    private static BigDecimal calculate(
-            String operator, BigDecimal a, BigDecimal b) {
-
-        switch (operator.toLowerCase(Locale.ROOT)) {
-            case "+":
-                return add(a, b);
-
-            case "-":
-                return subtract(a, b);
-
-            case "*":
-                return multiply(a, b);
-
-            case "/":
-                return divide(a, b);
-
-            case "%":
-                return modulus(a, b);
-
-            case "^":
-                return power(a, b);
-
-            case "percent":
-                return percentage(a, b);
-
-            default:
-                throw new IllegalArgumentException(
-                        "Unsupported operator: " + operator);
-        }
-    }
-
-    // ================= DISPLAY MENU =================
-
-    private static void displayMenu() {
-        System.out.println("\n======================================");
-        System.out.println("          JAVA CALCULATOR");
-        System.out.println("======================================");
-        System.out.println(" +       Addition");
-        System.out.println(" -       Subtraction");
-        System.out.println(" *       Multiplication");
-        System.out.println(" /       Division");
-        System.out.println(" %       Modulus / Remainder");
-        System.out.println(" ^       Power");
-        System.out.println(" sqrt    Square root");
-        System.out.println(" !       Factorial");
-        System.out.println(" percent Percentage");
-        System.out.println(" exit    Close calculator");
-        System.out.println("======================================");
-        System.out.println(
-                "Tip: Type 'exit' at any prompt to quit.");
-    }
-
-    // Displays results without unnecessary trailing zeros
-    private static String formatResult(BigDecimal result) {
-        if (result.signum() == 0) {
-            return "0";
-        }
-
-        return result.stripTrailingZeros().toPlainString();
-    }
-
-    // ================= MAIN METHOD =================
-
-    public static void main(String[] args) {
-        displayMenu();
-
-        try {
-            while (true) {
-                System.out.print("\nEnter operator: ");
-
-                if (!SCANNER.hasNextLine()) {
-                    break;
-                }
-
-                String operator = SCANNER.nextLine()
-                        .trim()
-                        .toLowerCase(Locale.ROOT);
-
-                if (operator.equals("exit")) {
-                    break;
-                }
-
-                if (operator.isEmpty()) {
-                    System.out.println(
-                            "Please enter an operator.");
-                    continue;
-                }
-
-                try {
-                    BigDecimal result;
-
-                    // Unary operations: sqrt and factorial
-                    if (operator.equals("sqrt")
-                            || operator.equals("!")) {
-
-                        BigDecimal number =
-                                readNumber("Enter number: ");
-
-                        if (number == null) {
-                            break;
-                        }
-
-                        if (operator.equals("sqrt")) {
-                            result = squareRoot(number);
-                        } else {
-                            result = factorial(number);
-                        }
-
-                    } else if (operator.equals("+")
-                            || operator.equals("-")
-                            || operator.equals("*")
-                            || operator.equals("/")
-                            || operator.equals("%")
-                            || operator.equals("^")
-                            || operator.equals("percent")) {
-
-                        String firstPrompt =
-                                operator.equals("percent")
-                                ? "Enter base value: "
-                                : "Enter first number: ";
-
-                        BigDecimal first = readNumber(firstPrompt);
-
-                        if (first == null) {
-                            break;
-                        }
-
-                        String secondPrompt =
-                                operator.equals("percent")
-                                ? "Enter percentage: "
-                                : "Enter second number: ";
-
-                        BigDecimal second = readNumber(secondPrompt);
-
-                        if (second == null) {
-                            break;
-                        }
-
-                        result = calculate(operator, first, second);
-
-                    } else {
-                        System.out.println(
-                                "Invalid operator. Choose an operator "
-                                        + "from the menu.");
-                        continue;
+                b.addMouseListener(new MouseAdapter() {
+                    public void mouseEntered(MouseEvent e) {
+                        b.setBackground(cyan);
+                        b.setForeground(bg);
                     }
 
-                    System.out.println(
-                            "Result: " + formatResult(result));
+                    public void mouseExited(MouseEvent e) {
+                        b.setBackground(getButtonColor(key));
+                        b.setForeground(white);
+                    }
+                });
 
-                } catch (ArithmeticException
-                        | IllegalArgumentException e) {
+                b.addActionListener(e -> handle(key));
+                buttons.add(b);
+            }
+        }
 
-                    System.out.println(
-                            "Error: " + e.getMessage());
+        calculator.add(screen, BorderLayout.NORTH);
+        calculator.add(buttons, BorderLayout.CENTER);
+
+        historyPanel = new JPanel();
+        historyPanel.setLayout(new BoxLayout(historyPanel, BoxLayout.Y_AXIS));
+        historyPanel.setBackground(panel);
+        historyPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        historyPanel.setPreferredSize(new Dimension(165, 100));
+
+        JLabel historyTitle = new JLabel("HISTORY");
+        historyTitle.setForeground(purple);
+        historyTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        historyPanel.add(historyTitle);
+
+        main.add(header, BorderLayout.NORTH);
+        main.add(calculator, BorderLayout.CENTER);
+        main.add(historyPanel, BorderLayout.EAST);
+
+        setContentPane(main);
+
+        setupKeyboard();
+    }
+
+    private Color getButtonColor(String key) {
+
+        if (key.equals("=")) return new Color(0, 145, 135);
+
+        if (key.equals("AC") || key.equals("DEL"))
+            return new Color(130, 45, 70);
+
+        if ("÷×-+^√!%π".contains(key))
+            return new Color(75, 60, 130);
+
+        return new Color(38, 49, 73);
+    }
+
+    private void handle(String key) {
+
+        try {
+
+            if (key.matches("[0-9]")) {
+                if (newInput || input.equals("0")) input = key;
+                else if (input.length() < 20) input += key;
+                newInput = false;
+                updateDisplay();
+            }
+
+            else if (key.equals(".")) {
+                if (newInput) {
+                    input = "0";
+                    newInput = false;
                 }
-            }
-        } finally {
-            SCANNER.close();
-        }
-
-        System.out.println(
-                "\nCalculator closed. Goodbye!");
-    }
-}
-
-    private static final Scanner SCANNER = new Scanner(System.in);
-
-    // Basic arithmetic operations
-    private static double add(double a, double b) {
-        return a + b;
-    }
-
-    private static double subtract(double a, double b) {
-        return a - b;
-    }
-
-    private static double multiply(double a, double b) {
-        return a * b;
-    }
-
-    private static double divide(double a, double b) {
-        if (b == 0.0) {
-            throw new ArithmeticException(
-                "Division by zero is not allowed."
-            );
-        }
-        return a / b;
-    }
-
-    private static double modulus(double a, double b) {
-        if (b == 0.0) {
-            throw new ArithmeticException(
-                "Modulus by zero is not allowed."
-            );
-        }
-        return a % b;
-    }
-
-    // Advanced mathematical operations
-    private static double power(double a, double b) {
-        return Math.pow(a, b);
-    }
-
-    private static double squareRoot(double number) {
-        if (number < 0.0) {
-            throw new ArithmeticException(
-                "Square root of a negative number is not real."
-            );
-        }
-        return Math.sqrt(number);
-    }
-
-    // Calculates a percentage of a value
-    // Example: 20% of 500 = 100
-    private static double percentage(double value, double percent) {
-        return (value / 100.0) * percent;
-    }
-
-    // Factorial supports non-negative integers up to 170
-    private static double factorial(double number) {
-        if (number < 0 || number != Math.floor(number)) {
-            throw new ArithmeticException(
-                "Factorial requires a non-negative integer."
-            );
-        }
-
-        if (number > 170) {
-            throw new ArithmeticException(
-                "Factorial is too large. Maximum supported input is 170."
-            );
-        }
-
-        double result = 1.0;
-
-        for (int i = 2; i <= (int) number; i++) {
-            result *= i;
-        }
-
-        return result;
-    }
-
-    // Prevent infinity and NaN results from being displayed
-    private static double validateResult(double result) {
-        if (Double.isNaN(result) || Double.isInfinite(result)) {
-            throw new ArithmeticException(
-                "Result is outside the supported numeric range."
-            );
-        }
-        return result;
-    }
-
-    // Read and validate a number
-    private static Double readNumber(String prompt) {
-        while (true) {
-            System.out.print(prompt);
-
-            if (!SCANNER.hasNextLine()) {
-                return null;
+                if (!input.contains(".")) input += ".";
+                updateDisplay();
             }
 
-            String input = SCANNER.nextLine().trim();
-
-            if (input.equalsIgnoreCase("exit")) {
-                return null;
+            else if (key.equals("AC")) {
+                clear();
             }
 
-            if (input.isEmpty()) {
-                System.out.println("Input cannot be empty.\n");
-                continue;
+            else if (key.equals("DEL")) {
+                if (input.length() > 1)
+                    input = input.substring(0, input.length() - 1);
+                else input = "0";
+                updateDisplay();
             }
 
-            try {
-                double number = Double.parseDouble(input);
+            else if (key.equals("±")) {
+                input = input.startsWith("-")
+                        ? input.substring(1) : "-" + input;
+                updateDisplay();
+            }
 
-                if (Double.isNaN(number)
-                        || Double.isInfinite(number)) {
-                    System.out.println(
-                        "Please enter a finite number.\n"
-                    );
-                    continue;
-                }
+            else if (key.equals("π")) {
+                input = String.valueOf(Math.PI);
+                newInput = true;
+                updateDisplay();
+            }
 
-                return number;
+            else if ("+-×÷^".contains(key) && key.length() == 1) {
+                first = Double.parseDouble(input);
+                operator = key;
+                expression.setText(input + " " + operator);
+                newInput = true;
+            }
 
-            } catch (NumberFormatException e) {
-                System.out.println(
-                    "Invalid number. Please try again.\n"
+            else if (key.equals("=")) {
+                calculate();
+            }
+
+            else if (key.equals("√")) {
+                double n = Double.parseDouble(input);
+                if (n < 0) throw new ArithmeticException("Invalid square root");
+                input = String.valueOf(Math.sqrt(n));
+                expression.setText("√(" + n + ")");
+                newInput = true;
+                updateDisplay();
+            }
+
+            else if (key.equals("!")) {
+                int n = Integer.parseInt(input);
+                if (n < 0 || n > 170)
+                    throw new ArithmeticException("Enter integer from 0 to 170");
+
+                double result = 1;
+                for (int i = 2; i <= n; i++) result *= i;
+
+                input = String.valueOf(result);
+                expression.setText(n + "!");
+                newInput = true;
+                updateDisplay();
+            }
+
+            else if (key.equals("%")) {
+                input = String.valueOf(
+                    Double.parseDouble(input) / 100
                 );
+                expression.setText("Percentage");
+                newInput = true;
+                updateDisplay();
             }
+
+            else if (key.equals("HIST")) {
+                showHistory();
+            }
+
+        } catch (Exception ex) {
+            display.setText("ERROR");
+            expression.setText(ex.getMessage());
+            input = "0";
+            operator = "";
+            newInput = true;
         }
     }
 
-    private static void displayMenu() {
-        System.out.println("\n================================");
-        System.out.println("       JAVA CALCULATOR");
-        System.out.println("================================");
-        System.out.println(" +       Addition");
-        System.out.println(" -       Subtraction");
-        System.out.println(" *       Multiplication");
-        System.out.println(" /       Division");
-        System.out.println(" %       Modulus");
-        System.out.println(" ^       Power");
-        System.out.println(" sqrt    Square root");
-        System.out.println(" !       Factorial");
-        System.out.println(" percent Percentage");
-        System.out.println(" exit    Close calculator");
-        System.out.println("================================");
-        System.out.println(
-            "Tip: Type exit at any prompt to quit."
+    private void calculate() {
+
+        if (operator.isEmpty()) return;
+
+        double second = Double.parseDouble(input);
+        double result;
+
+        switch (operator) {
+            case "+": result = first + second; break;
+            case "-": result = first - second; break;
+            case "×": result = first * second; break;
+            case "÷":
+                if (second == 0) throw new ArithmeticException("Cannot divide by zero");
+                result = first / second;
+                break;
+            case "^": result = Math.pow(first, second); break;
+            default: return;
+        }
+
+        if (!Double.isFinite(result))
+            throw new ArithmeticException("Result out of range");
+
+        String oldExpression = first + " " + operator + " " + second;
+
+        answer = result;
+        input = BigDecimal.valueOf(result)
+                .stripTrailingZeros().toPlainString();
+
+        expression.setText(oldExpression + " =");
+
+        history.add(0, oldExpression + " = " + input);
+
+        if (history.size() > 10) history.remove(history.size() - 1);
+
+        refreshHistory();
+
+        operator = "";
+        newInput = true;
+        updateDisplay();
+
+        animateResult();
+    }
+
+    private void animateResult() {
+
+        Timer timer = new Timer(80, null);
+        final int[] count = {0};
+
+        timer.addActionListener(e -> {
+            display.setForeground(
+                count[0] % 2 == 0 ? Color.WHITE : cyan
+            );
+
+            count[0]++;
+
+            if (count[0] >= 6) {
+                display.setForeground(cyan);
+                timer.stop();
+            }
+        });
+
+        timer.start();
+    }
+
+    private void clear() {
+        input = "0";
+        first = 0;
+        operator = "";
+        newInput = true;
+        expression.setText("READY TO CALCULATE");
+        updateDisplay();
+    }
+
+    private void updateDisplay() {
+        display.setText(input);
+        display.setForeground(cyan);
+    }
+
+    private void refreshHistory() {
+
+        historyPanel.removeAll();
+
+        JLabel heading = new JLabel("HISTORY");
+        heading.setForeground(purple);
+        heading.setFont(new Font("Arial", Font.BOLD, 14));
+        historyPanel.add(heading);
+
+        for (String item : history) {
+            JLabel label = new JLabel("<html>" + item + "</html>");
+            label.setForeground(white);
+            label.setFont(new Font("Arial", Font.PLAIN, 10));
+            label.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
+            historyPanel.add(label);
+        }
+
+        historyPanel.revalidate();
+        historyPanel.repaint();
+    }
+
+    private void showHistory() {
+
+        if (history.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No history available!");
+            return;
+        }
+
+        JOptionPane.showMessageDialog(
+            this,
+            String.join("\n\n", history),
+            "Calculation History",
+            JOptionPane.INFORMATION_MESSAGE
         );
     }
 
-    private static double calculate(
-            String operator, double a, double b) {
+    private void setupKeyboard() {
 
-        double result;
+        String[][] keys = {
+            {"0", "0"}, {"1", "1"}, {"2", "2"},
+            {"3", "3"}, {"4", "4"}, {"5", "5"},
+            {"6", "6"}, {"7", "7"}, {"8", "8"},
+            {"9", "9"}, {"+", "+"}, {"-", "-"},
+            {"*", "×"}, {"/", "÷"}, {"ENTER", "="},
+            {"BACK_SPACE", "DEL"}, {"ESCAPE", "AC"}
+        };
 
-        switch (operator.toLowerCase(Locale.ROOT)) {
-            case "+":
-                result = add(a, b);
-                break;
+        for (String[] key : keys) {
 
-            case "-":
-                result = subtract(a, b);
-                break;
+            getRootPane().getInputMap(
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+            ).put(KeyStroke.getKeyStroke(key[0]), key[0]);
 
-            case "*":
-                result = multiply(a, b);
-                break;
-
-            case "/":
-                result = divide(a, b);
-                break;
-
-            case "%":
-                result = modulus(a, b);
-                break;
-
-            case "^":
-                result = power(a, b);
-                break;
-
-            case "percent":
-                result = percentage(a, b);
-                break;
-
-            default:
-                throw new IllegalArgumentException(
-                    "Unsupported operator."
-                );
+            getRootPane().getActionMap().put(
+                key[0],
+                new AbstractAction() {
+                    public void actionPerformed(ActionEvent e) {
+                        handle(key[1]);
+                    }
+                }
+            );
         }
-
-        return validateResult(result);
     }
 
     public static void main(String[] args) {
-        displayMenu();
 
-        try {
-            while (true) {
-                System.out.print("\nEnter operator: ");
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(
+                    UIManager.getSystemLookAndFeelClassName()
+                );
+            } catch (Exception ignored) {}
 
-                if (!SCANNER.hasNextLine()) {
-                    break;
-                }
-
-                String operator = SCANNER.nextLine()
-                                         .trim()
-                                         .toLowerCase(Locale.ROOT);
-
-                if (operator.equals("exit")) {
-                    break;
-                }
-
-                if (operator.isEmpty()) {
-                    System.out.println(
-                        "Please enter an operator."
-                    );
-                    continue;
-                }
-
-                try {
-                    double result;
-
-                    // Unary operations need only one number
-                    if (operator.equals("sqrt")
-                            || operator.equals("!")) {
-
-                        Double number = readNumber("Enter number: ");
-
-                        if (number == null) {
-                            break;
-                        }
-
-                        result = operator.equals("sqrt")
-                                ? squareRoot(number)
-                                : factorial(number);
-
-                        result = validateResult(result);
-
-                    } else if (
-                            operator.equals("+")
-                            || operator.equals("-")
-                            || operator.equals("*")
-                            || operator.equals("/")
-                            || operator.equals("%")
-                            || operator.equals("^")
-                            || operator.equals("percent")) {
-
-                        Double first = readNumber(
-                            operator.equals("percent")
-                                ? "Enter base value: "
-                                : "Enter first number: "
-                        );
-
-                        if (first == null) {
-                            break;
-                        }
-
-                        Double second = readNumber(
-                            operator.equals("percent")
-                                ? "Enter percentage: "
-                                : "Enter second number: "
-                        );
-
-                        if (second == null) {
-                            break;
-                        }
-
-                        result = calculate(operator, first, second);
-
-                    } else {
-                        System.out.println(
-                            "Invalid operator. Please try again."
-                        );
-                        continue;
-                    }
-
-                    System.out.println(
-                        "Result: " + String.format(
-                            Locale.ROOT, "%.10g", result
-                        )
-                    );
-
-                } catch (ArithmeticException e) {
-                    System.out.println("Math Error: " + e.getMessage());
-
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Error: " + e.getMessage());
-                }
-            }
-        } finally {
-            SCANNER.close();
-        }
-
-        System.out.println("\nCalculator closed. Goodbye!");
+            new Calculator().setVisible(true);
+        });
     }
 }
